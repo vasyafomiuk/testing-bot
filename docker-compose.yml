@@ -1,0 +1,76 @@
+version: '3.8'
+
+services:
+  testing-agent:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: testing-agent
+    restart: unless-stopped
+    environment:
+      # OpenAI Configuration
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      
+      # Slack Configuration
+      - SLACK_BOT_TOKEN=${SLACK_BOT_TOKEN}
+      - SLACK_APP_TOKEN=${SLACK_APP_TOKEN}
+      - SLACK_SIGNING_SECRET=${SLACK_SIGNING_SECRET}
+      
+      # Atlassian Configuration
+      - JIRA_URL=${JIRA_URL}
+      - CONFLUENCE_URL=${CONFLUENCE_URL}
+      - ATLASSIAN_EMAIL=${ATLASSIAN_EMAIL}
+      - ATLASSIAN_API_TOKEN=${ATLASSIAN_API_TOKEN}
+      
+      # Application Configuration
+      - DEBUG=${DEBUG:-false}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      
+      # Docker-specific configurations
+      - PYTHONUNBUFFERED=1
+    volumes:
+      # Persistent storage for test outputs
+      - ./data/videos:/home/app/videos
+      - ./data/screenshots:/home/app/screenshots
+      - ./data/reports:/home/app/reports
+      - ./data/logs:/home/app/logs
+      
+      # Optional: Mount configuration files
+      - ./.env:/home/app/.env:ro
+    
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '1.0'
+        reservations:
+          memory: 512M
+          cpus: '0.5'
+    
+    # Network configuration
+    networks:
+      - testing-agent-network
+    
+    # Health check
+    healthcheck:
+      test: ["CMD", "python", "-c", "import sys; sys.exit(0)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    
+    # Logging configuration
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  testing-agent-network:
+    driver: bridge
+
+volumes:
+  testing-agent-data:
+    driver: local 
